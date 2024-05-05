@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.13;
 
-import {RowanNFT} from "src/RowanNFT.sol";
+import {RowanNFT} from "../src/nft/RowanNFT.sol";
 import "forge-std/Test.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
 contract TestContract is Test, TestUtils {
+    using StringsUpgradeable for uint256;
+
     address deployer;
     address user;
     RowanNFT rowanNFT;
@@ -80,12 +83,12 @@ contract TestContract is Test, TestUtils {
     function testBaseAndDefaultURI() public {
         assertEq(
             rowanNFT.defaultURI(),
-            "https://openseacreatures.io/3",
+            "https://openseacreatures.io/",
             "wrong defaultURI"
         );
         assertEq(
             rowanNFT.baseURI(),
-            "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/3.png",
+            "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/",
             "wrong baseURI"
         );
     }
@@ -100,7 +103,7 @@ contract TestContract is Test, TestUtils {
         uint tokenId = userTokens[0];
         assertEq(
             rowanNFT.tokenURI(tokenId),
-            "https://openseacreatures.io/3",
+            string(abi.encodePacked("https://openseacreatures.io/", tokenId.toString())),
             "wrong unrevealed URI"
         );
         console.log("unrevealed URI : ", rowanNFT.tokenURI(tokenId));
@@ -119,7 +122,7 @@ contract TestContract is Test, TestUtils {
         console.log("revealed URI : ", rowanNFT.tokenURI(tokenId));
         assertEq(
             rowanNFT.tokenURI(tokenId),
-            "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/3.png",
+            string(abi.encodePacked("https://storage.googleapis.com/opensea-prod.appspot.com/puffs/", tokenId.toString(), ".png")),
             "wrong revealed URI"
         );
     }

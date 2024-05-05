@@ -7,6 +7,7 @@
   "author": "rowan",
   "license": "MIT",
   "dependencies": {
+    "@chainlink/contracts": "^1.1.0",
     "@openzeppelin/contracts": "^4.8.2",
     "@openzeppelin/contracts-upgradeable": "^4.8.2"
   }
