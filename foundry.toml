@@ -1,2 +1,4 @@
 [profile.ci.fuzz]
 runs = 10_000
+[profile.default]
+eth_rpc_url = "https://rpc2.sepolia.org"
