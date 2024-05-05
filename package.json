@@ -1,0 +1,13 @@
+{
+  "name": "hw",
+  "version": "1.0.0",
+  "description": "ether-fi home test",
+  "main": "index.js",
+  "repository": "https://gitlab.com/eth_fi/hw.git",
+  "author": "rowan",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.8.2",
+    "@openzeppelin/contracts-upgradeable": "^4.8.2"
+  }
+}
