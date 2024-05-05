@@ -16,10 +16,5 @@ contract TestUtils is Test {
 
         return payable(address(proxy));
     }
-
-    function reset() internal {
-        vm.revertTo(_setupSnapshotId);
-        _setupSnapshotId = vm.snapshot();
-    }
 }
 
