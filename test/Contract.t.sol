@@ -12,6 +12,9 @@ contract TestContract is Test, TestUtils {
     address user;
     RowanNFT rowanNFT;
     ProxyAdmin proxyAdmin;
+    uint[] userTokens;
+    error NonexistentId(uint);
+
 
     function setUp() public {
         deployer = address(0x1234);
@@ -27,13 +30,19 @@ contract TestContract is Test, TestUtils {
         vm.stopPrank();
     }
 
-    function testBar() public {
-        assertEq(uint256(1), uint256(1), "ok");
+    function userMint() public {
+        delete userTokens;
+        testMintSuccess();
+        for (uint i ; i < rowanNFT.tokenLength(); i++) {
+            if (rowanNFT.ownerOf(i) == user) {
+                userTokens.push(i);
+            }
+        }
     }
 
-    function testFoo(uint256 x) public {
-        vm.assume(x < type(uint128).max);
-        assertEq(x + x, x * 2);
+    function reveal() public {
+        vm.prank(deployer);
+        rowanNFT.reveal();
     }
 
     function testOwnership() public {
@@ -43,6 +52,12 @@ contract TestContract is Test, TestUtils {
     function testNameAndSymbol() public {
         assertEq(rowanNFT.name(), "ROWAN_NFT", "wrong name");
         assertEq(rowanNFT.symbol(), "ROWAN", "wrong symbol");
+    }
+
+    function testReveal() public {
+        assertTrue(!rowanNFT.revealed(), "revealed before reveal");
+        reveal();
+        assertTrue(rowanNFT.revealed(), "revealed after reveal");
     }
 
     function testMintFail() public {
@@ -61,4 +76,52 @@ contract TestContract is Test, TestUtils {
         assertEq(address(rowanNFT).balance, rowanNFT.price() * mintAmount, "wrong contract balance");
         assertEq(rowanNFT.balanceOf(user), mintAmount, "wrong mintAmount");
     }
+
+    function testBaseAndDefaultURI() public {
+        assertEq(
+            rowanNFT.defaultURI(),
+            "https://openseacreatures.io/3",
+            "wrong defaultURI"
+        );
+        assertEq(
+            rowanNFT.baseURI(),
+            "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/3.png",
+            "wrong baseURI"
+        );
+    }
+
+    function testNonexistentIdURIBeforeRevealedFail() public {
+        vm.expectRevert();
+        rowanNFT.tokenURI(0);
+    }
+
+    function testUserTokenURIBeforeRevealed() public {
+        userMint();
+        uint tokenId = userTokens[0];
+        assertEq(
+            rowanNFT.tokenURI(tokenId),
+            "https://openseacreatures.io/3",
+            "wrong unrevealed URI"
+        );
+        console.log("unrevealed URI : ", rowanNFT.tokenURI(tokenId));
+    }
+
+    function testNonexistentIdURIAfterRevealedFail() public {
+        reveal();
+        vm.expectRevert();
+        rowanNFT.tokenURI(0);
+    }
+
+    function testUserTokenURIAfterRevealed() public {
+        userMint();
+        reveal();
+        uint tokenId = userTokens[0];
+        console.log("revealed URI : ", rowanNFT.tokenURI(tokenId));
+        assertEq(
+            rowanNFT.tokenURI(tokenId),
+            "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/3.png",
+            "wrong revealed URI"
+        );
+    }
+
 }
