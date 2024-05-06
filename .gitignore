@@ -1,5 +1,14 @@
+# directories
 cache/
 out/
 .idea/
-hw.iml
 node_modules
+
+#files
+*.env
+hw.iml
+
+# broadcasts
+!broadcast
+broadcast/*
+broadcast/*/31337/
