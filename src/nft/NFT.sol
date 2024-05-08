@@ -75,7 +75,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         unrevealedURI = Constant.DEFAULT_URI;
         price = 0.00001 ether;
         COORDINATOR = VRFCoordinatorV2Interface(Constant.VRF_COORDINATOR);
-        LinkTokenInterface(Constant.LINK);
+        LINK = LinkTokenInterface(Constant.LINK);
 
         // create subscription to Chainlink VRF2
         subscriptionId = COORDINATOR.createSubscription();
@@ -104,6 +104,10 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
             // Seperated Collection case
             require(realNFTForSeperatedCollection != address(0), "no realNFT address yet");
         }
+    }
+
+    function withdrawFee() external onlyOwner {
+        payable(owner()).transfer(address(this).balance);
     }
 
     /* VIEW FUNCTIONS */
@@ -135,7 +139,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         }
     }
 
-    function linkBalance() public returns (uint balance) {
+    function linkBalance() public view returns (uint balance) {
         (balance,,,) = COORDINATOR.getSubscription(subscriptionId);
     }
 
@@ -157,9 +161,10 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
 
     /* MUTATIVE FUNCTIONS */
     function purchase(uint _mintAmount) public payable {
+        require(!hasRevealStarted, "Already reveal started");
         uint pay = price * _mintAmount;
         require(msg.value >= pay, "Not enough");
-        require(tokenLength + _mintAmount < MAX_SUPPLY, "Cannot mint");
+        require(tokenLength + _mintAmount <= MAX_SUPPLY, "Cannot mint");
 
         for (uint i; i < _mintAmount; i++) {
             _safeMint(msg.sender, tokenLength);
