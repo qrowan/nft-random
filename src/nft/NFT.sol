@@ -95,10 +95,10 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         hasRevealStarted = true;
 
         if (strategy() == RevealStrategy.InCollection) {
-            require(requestStatus[type(uint).max] == RequestStatus.NotRequested, "Already requested");
             // In Collection case
-            _requestRandomWords(type(uint).max);
+            require(requestStatus[type(uint).max] == RequestStatus.NotRequested, "Already requested");
             requestStatus[type(uint).max] = RequestStatus.Requested;
+            _requestRandomWords(type(uint).max);
         } else {
             // Seperated Collection case
             require(realNFTForSeperatedCollection != address(0), "no realNFT address yet");

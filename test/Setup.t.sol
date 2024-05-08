@@ -72,7 +72,7 @@ contract Setup is Test, TestUtils {
     }
 
 
-    function revealInCollection() public {
+    function startRevealInCollection() public {
         vm.prank(deployer);
         nft.startReveal();
     }

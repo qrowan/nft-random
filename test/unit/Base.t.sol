@@ -44,6 +44,6 @@ contract BaseTest is Setup {
         userPurchase(user);
     }
     function testRevealInCollection() public {
-        revealInCollection();
+        startRevealInCollection();
     }
 }

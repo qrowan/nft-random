@@ -13,6 +13,7 @@ contract RealNFTForSeperatedCollection is ERC721Upgradeable, Ownable2StepUpgrade
     address public unrevealedNFT;
     mapping(uint => uint) public words;
 
+    /* MODIFIERS */
     modifier onlyUnrevealedNFT() {
         require(msg.sender == unrevealedNFT, "Only Unrevealed NFT");
         _;

@@ -38,7 +38,7 @@ contract URITest is Setup {
     function testUserTokenURIBeforeFulfilledWithInCollection() public {
         userPurchase(user);
         uint tokenId = nft.tokenLength() - 1;
-        revealInCollection();
+        startRevealInCollection();
         assertEq(
             nft.tokenURI(tokenId),
             Constant.UNREVEALED_URI,
@@ -49,7 +49,7 @@ contract URITest is Setup {
     function testUserTokenURIAfterFulfilledWithInCollection() public {
         userPurchase(user);
         uint tokenId = nft.tokenLength() - 1;
-        revealInCollection();
+        startRevealInCollection();
         uint requestId = nft.tokenIdToRequestId(type(uint).max);
         console.log("tid ", tokenId);
         console.log("rid ", requestId);
