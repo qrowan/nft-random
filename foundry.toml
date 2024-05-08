@@ -1,4 +1,5 @@
 [profile.default]
+eth_rpc_url = "https://rpc2.sepolia.org"
 auto_detect_solc = false
 block_timestamp = 1_680_220_800 # March 31, 2023 at 00:00 GMT
 bytecode_hash = "none"

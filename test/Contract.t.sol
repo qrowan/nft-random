@@ -1,27 +1,34 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.13;
 
-import {RowanNFT} from "../src/nft/RowanNFT.sol";
 import "forge-std/Test.sol";
 import {TestUtils} from "./TestUtils.sol";
-import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "src/libraries/Constant.sol";
+
+import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+
+import {NFT} from "src/nft/NFT.sol";
+import {RealNFTForSeperatedCollection} from "src/nft/RealNFTForSeperatedCollection.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
+
+import "src/libraries/Constant.sol";
 
 contract TestContract is Test, TestUtils {
     using StringsUpgradeable for uint256;
 
-    address deployer;
-    address user;
-    RowanNFT rowanNFT;
-    ProxyAdmin proxyAdmin;
-    uint[] userTokens;
-    error NonexistentId(uint);
-    IERC20Metadata LINK = IERC20Metadata(Constant.LINK);
+    address public deployer;
+    address public user;
 
+    ProxyAdmin public proxyAdmin;
+    NFT public nft;
+    RealNFTForSeperatedCollection realNFTForSeperatedCollection;
+
+    uint[] public userTokens;
+    IERC20Metadata public LINK = IERC20Metadata(Constant.LINK);
+
+    error NonexistentId(uint);
 
     function setUp() public {
         deployer = address(0x1234);
@@ -32,59 +39,68 @@ contract TestContract is Test, TestUtils {
         {
             proxyAdmin = new ProxyAdmin();
             LINK.transfer(address(proxyAdmin), 100 ether);
-            RowanNFT _rowanNFT = new RowanNFT();
-            rowanNFT = RowanNFT(_makeBeaconProxy(proxyAdmin, address(_rowanNFT)));
-            rowanNFT.initialize();
+            NFT _nft = new NFT();
+            nft = NFT(_makeBeaconProxy(proxyAdmin, address(_nft)));
+            RealNFTForSeperatedCollection _realNFT = new RealNFTForSeperatedCollection();
+            realNFTForSeperatedCollection = RealNFTForSeperatedCollection(
+                _makeBeaconProxy(proxyAdmin, address(_realNFT))
+            );
+
+            nft.initialize();
+            realNFTForSeperatedCollection.initialize(address(nft));
         }
         vm.stopPrank();
     }
 
+    function testDeploy() public {}
+
     function userMint() public {
         delete userTokens;
         testMintSuccess();
-        for (uint i ; i < rowanNFT.tokenLength(); i++) {
-            if (rowanNFT.ownerOf(i) == user) {
+        for (uint i ; i < nft.tokenLength(); i++) {
+            if (nft.ownerOf(i) == user) {
                 userTokens.push(i);
             }
         }
     }
 
-    function reveal() public {
+
+    function revealInCollection() public {
         vm.prank(deployer);
-        rowanNFT.reveal();
+        nft.startReveal();
     }
 
-    function testOwnership() public {
-        assertEq(rowanNFT.owner(), deployer, "wrong owner");
+    function testOwnership() public view {
+        assertEq(nft.owner(), deployer, "wrong owner");
     }
 
-    function testNameAndSymbol() public {
-        assertEq(rowanNFT.name(), "ROWAN_NFT", "wrong name");
-        assertEq(rowanNFT.symbol(), "ROWAN", "wrong symbol");
+    function testNameAndSymbol() public view {
+        assertEq(nft.name(), "ROWAN_NFT", "wrong name");
+        assertEq(nft.symbol(), "ROWAN", "wrong symbol");
     }
 
-    function testReveal() public {
-        assertTrue(!rowanNFT.revealed(), "revealed before reveal");
-        reveal();
-        assertTrue(rowanNFT.revealed(), "revealed after reveal");
+    function testRevealInCollection() public {
+        assertTrue(!nft.hasRevealStarted(), "hasRevealStarted before reveal");
+        revealInCollection();
+        assertTrue(nft.hasRevealStarted(), "hasRevealStarted after reveal");
     }
 
     function testMintFail() public {
-        vm.deal(user, rowanNFT.price() - 1);
+        vm.deal(user, nft.price() - 1);
         vm.prank(user);
         vm.expectRevert("Not enough");
-        rowanNFT.mint{value: user.balance}(1);
+        nft.purchase{value: user.balance}(1);
     }
 
 
     function testMintSuccess() public {
         uint mintAmount = 10;
-        vm.deal(user, rowanNFT.price() * mintAmount + 1);
+        vm.deal(user, nft.price() * mintAmount + 1);
         vm.prank(user);
-        rowanNFT.mint{value: user.balance}(mintAmount); // transferred all balance
+        nft.purchase{value: user.balance}(mintAmount); // transferred all balance
         assertEq(user.balance, 1, "wrong user balance"); // refunded 1 as change
-        assertEq(address(rowanNFT).balance, rowanNFT.price() * mintAmount, "wrong contract balance");
-        assertEq(rowanNFT.balanceOf(user), mintAmount, "wrong mintAmount");
+        assertEq(address(nft).balance, nft.price() * mintAmount, "wrong contract balance");
+        assertEq(nft.balanceOf(user), mintAmount, "wrong mintAmount");
     }
 
 //    function testMintMaxFail() public {
@@ -94,23 +110,23 @@ contract TestContract is Test, TestUtils {
 //    }
 
     function testMintMax() public {
-        vm.deal(user, rowanNFT.price() * (rowanNFT.MAX_SUPPLY() + 1));
+        vm.deal(user, nft.price() * (nft.MAX_SUPPLY() + 1));
         vm.startPrank(user);
-        rowanNFT.mint{value: user.balance}(rowanNFT.MAX_SUPPLY());
+        nft.purchase{value: user.balance}(nft.MAX_SUPPLY());
         vm.expectRevert("Cannot mint");
-        rowanNFT.mint{value: user.balance}(1);
+        nft.purchase{value: user.balance}(1);
         vm.stopPrank();
 
     }
 
-    function testBaseAndDefaultURI() public {
+    function testBaseAndDefaultURI() public view {
         assertEq(
-            rowanNFT.defaultURI(),
+            nft.unrevealedURI(),
             "https://openseacreatures.io/",
             "wrong defaultURI"
         );
         assertEq(
-            rowanNFT.baseURI(),
+            nft.baseURI(),
             "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/",
             "wrong baseURI"
         );
@@ -118,7 +134,7 @@ contract TestContract is Test, TestUtils {
 
     function testNonexistentIdURIBeforeRevealedFail() public {
         vm.expectRevert();
-        rowanNFT.tokenURI(0);
+        nft.tokenURI(0);
     }
 
     function testUserTokenURIBeforeRevealed() public {
@@ -126,40 +142,35 @@ contract TestContract is Test, TestUtils {
         for (uint i; i < userTokens.length; i++) {
             uint tokenId = userTokens[i];
             assertEq(
-                rowanNFT.tokenURI(tokenId),
+                nft.tokenURI(tokenId),
                 string(abi.encodePacked("https://openseacreatures.io/", tokenId.toString())),
                 "wrong unrevealed URI"
             );
-            console.log("unrevealed URI : ", rowanNFT.tokenURI(tokenId));
+            console.log("unrevealed URI : ", nft.tokenURI(tokenId));
         }
     }
 
     function testNonexistentIdURIAfterRevealedFail() public {
-        reveal();
+        revealInCollection();
         vm.expectRevert();
-        rowanNFT.tokenURI(0);
+        nft.tokenURI(0);
     }
 
     function testUserTokenURIAfterRevealed() public {
         userMint();
-        reveal();
+        revealInCollection();
         for (uint i; i < userTokens.length; i++) {
             uint tokenId = userTokens[i];
-            console.log("revealed URI : ", rowanNFT.tokenURI(tokenId));
+            console.log("revealed URI : ", nft.tokenURI(tokenId));
             assertEq(
-                rowanNFT.tokenURI(tokenId),
+                nft.tokenURI(tokenId),
                 string(abi.encodePacked("https://storage.googleapis.com/opensea-prod.appspot.com/puffs/", tokenId.toString(), ".png")),
                 "wrong revealed URI"
             );
         }
     }
 
-    function testLogSubscriptionId() public {
-        console.log("Subscription ID ", rowanNFT.s_subscriptionId());
+    function testLogSubscriptionId() public view {
+        console.log("Subscription ID ", nft.subscriptionId());
     }
-
-    function testVRF() public {
-        // TODO : test about VRF after deploy
-    }
-
 }
