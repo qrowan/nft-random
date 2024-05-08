@@ -29,8 +29,6 @@ contract Setup is Test, TestUtils {
     VRFCoordinatorV2Interface public COORDINATOR = VRFCoordinatorV2Interface(Constant.VRF_COORDINATOR);
     LinkTokenInterface public LINK = LinkTokenInterface(Constant.LINK);
 
-    error NonexistentId(uint);
-
     function setUp() public {
         deployer = address(0x1234);
         user = address(0x1235);
@@ -53,38 +51,6 @@ contract Setup is Test, TestUtils {
         vm.stopPrank();
     }
 
-    function testDeploy() public {}
-
-    function testNameAndSymbol() public view {
-        assertEq(nft.name(), "Unrevealed Rowan' NFT", "wrong name");
-        assertEq(nft.symbol(), "uROWAN", "wrong symbol");
-    }
-
-    function testOwnership() public {
-        assertEq(nft.owner(), deployer, "wrong owner");
-        vm.prank(deployer);
-        nft.transferOwnership(user);
-        assertEq(nft.owner(), deployer, "wrong owner");
-        assertEq(nft.pendingOwner(), user, "wrong pendingOwner");
-        vm.prank(user);
-        nft.acceptOwnership();
-        assertEq(nft.owner(), user, "wrong owner");
-        assertEq(nft.pendingOwner(), address(0), "wrong pendingOwner");
-        vm.prank(user);
-        nft.renounceOwnership();
-        assertEq(nft.owner(), address(0), "wrong owner");
-    }
-
-    function testInitialVariables() public view {
-        assertNotEq(nft.subscriptionId(), 0, "Not set subscriptionId");
-        (uint96 balance, uint64 reqCount, address owner, address[] memory consumers) = COORDINATOR.getSubscription(nft.subscriptionId());
-        assertEq(balance, 0, "Already balance ??");
-        assertEq(reqCount, 0, "Already Req ??");
-        assertEq(owner, address(nft), "Subscription Owner");
-        assertEq(consumers.length, 1, "One consumer");
-        assertEq(consumers[0], address(nft), "consumer is not the nft");
-    }
-
     function addFund() internal {
         uint amount = 100 ether;
         deal(address(LINK), deployer, amount);
@@ -98,15 +64,30 @@ contract Setup is Test, TestUtils {
         assertEq(nft.linkBalance(), amount, "LINK balance is strange");
     }
 
-    function testAddFund() public {
-        addFund();
+    function userPurchase(address _user) internal {
+        vm.deal(_user, nft.price());
+        vm.startPrank(_user);
+        nft.purchase{value: user.balance}(1);
+        vm.stopPrank();
     }
 
-//
-//    function revealInCollection() public {
-//        vm.prank(deployer);
-//        nft.startReveal();
-//    }
+
+    function revealInCollection() public {
+        vm.prank(deployer);
+        nft.startReveal();
+    }
+
+    function mockFulFill(uint requestId) public {
+        NFT.RequestStatus status = nft.requestStatus(type(uint).max);
+        uint MAX_SUPPLY = nft.MAX_SUPPLY();
+        require(status == NFT.RequestStatus.Requested, "not requested");
+        uint256[] memory _randomWords = new uint256[](MAX_SUPPLY);
+        for (uint i; i < _randomWords.length; i++) {
+            _randomWords[i] = i;
+        }
+        vm.prank(address(COORDINATOR));
+        nft.rawFulfillRandomWords(requestId, _randomWords);
+    }
 //
 //
 //    function testRevealInCollection() public {
@@ -123,57 +104,6 @@ contract Setup is Test, TestUtils {
 ////        rowanNFT.mint{value: user.balance}(rowanNFT.MAX_SUPPLY());
 ////    }
 //
-//
-//    function testBaseAndDefaultURI() public view {
-//        assertEq(
-//            nft.unrevealedURI(),
-//            "https://openseacreatures.io/",
-//            "wrong defaultURI"
-//        );
-//        assertEq(
-//            nft.baseURI(),
-//            "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/",
-//            "wrong baseURI"
-//        );
-//    }
-//
-//    function testNonexistentIdURIBeforeRevealedFail() public {
-//        vm.expectRevert();
-//        nft.tokenURI(0);
-//    }
-//
-//    function testUserTokenURIBeforeRevealed() public {
-//        userMint();
-//        for (uint i; i < userTokens.length; i++) {
-//            uint tokenId = userTokens[i];
-//            assertEq(
-//                nft.tokenURI(tokenId),
-//                string(abi.encodePacked("https://openseacreatures.io/", tokenId.toString())),
-//                "wrong unrevealed URI"
-//            );
-//            console.log("unrevealed URI : ", nft.tokenURI(tokenId));
-//        }
-//    }
-//
-//    function testNonexistentIdURIAfterRevealedFail() public {
-//        revealInCollection();
-//        vm.expectRevert();
-//        nft.tokenURI(0);
-//    }
-//
-//    function testUserTokenURIAfterRevealed() public {
-//        userMint();
-//        revealInCollection();
-//        for (uint i; i < userTokens.length; i++) {
-//            uint tokenId = userTokens[i];
-//            console.log("revealed URI : ", nft.tokenURI(tokenId));
-//            assertEq(
-//                nft.tokenURI(tokenId),
-//                string(abi.encodePacked("https://storage.googleapis.com/opensea-prod.appspot.com/puffs/", tokenId.toString(), ".png")),
-//                "wrong revealed URI"
-//            );
-//        }
-//    }
 //
 //    function testLogSubscriptionId() public view {
 //        console.log("Subscription ID ", nft.subscriptionId());

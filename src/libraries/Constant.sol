@@ -11,7 +11,7 @@ library Constant {
     uint16 public constant REQUEST_CONFIRMATIONS = 3;
 
     string public constant BASE_URI = "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/";
-    string public constant DEFAULT_URI = "https://openseacreatures.io/";
+    string public constant UNREVEALED_URI = "https://openseacreatures.io/";
 
     // sample
     address public constant VRF_V2_CONSUMER = 0x51602415DD645d9e48FCBD21a00094453d4118f4; // sample

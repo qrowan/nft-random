@@ -49,4 +49,14 @@ contract PurchaseTest is Setup {
         nft.purchase{value: user.balance}(1);
         vm.stopPrank();
     }
+
+    function testPurchaseAlreadyRevealStartedFail() public {
+        vm.prank(deployer);
+        nft.startReveal();
+        vm.deal(user, nft.price());
+        vm.startPrank(user);
+        vm.expectRevert("Already reveal started");
+        nft.purchase{value: user.balance}(1);
+        vm.stopPrank();
+    }
 }

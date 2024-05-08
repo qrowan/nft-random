@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.13;
 
-import "../chainlink_libraries/VRFConsumerBaseV2Upgradeable.sol";
 import "../libraries/Constant.sol";
 import "../interfaces/IRealNFTForSeperatedCollection.sol";
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
+import {VRFConsumerBaseV2Upgradeable} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Upgradeable.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 
@@ -30,6 +30,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     uint64 public subscriptionId;
     mapping(uint => RequestStatus) public requestStatus; // 0: not requested, 1: requested, 2: fulfilled
     mapping(uint => uint) public requestIdToTokenId;
+    mapping(uint => uint) public tokenIdToRequestId;
     mapping(uint => uint) public randomWords;
 
     enum RevealStrategy {
@@ -43,9 +44,6 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         Requested,
         FulFilled
     }
-
-
-    error NonexistentId(uint tokenId);
 
     /* MODIFIERS */
     modifier onlyInCollectionStrategy {
@@ -68,11 +66,11 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         // init inherited contracts
         __ERC721_init("" , "");
         __Ownable2Step_init();
-        __VRFConsumerBaseV2_init(address(COORDINATOR));
+        __VRFConsumerBaseV2_init(Constant.VRF_COORDINATOR);
 
         // set variables
         baseURI = Constant.BASE_URI;
-        unrevealedURI = Constant.DEFAULT_URI;
+        unrevealedURI = Constant.UNREVEALED_URI;
         price = 0.00001 ether;
         COORDINATOR = VRFCoordinatorV2Interface(Constant.VRF_COORDINATOR);
         LINK = LinkTokenInterface(Constant.LINK);
@@ -100,6 +98,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
             require(requestStatus[type(uint).max] == RequestStatus.NotRequested, "Already requested");
             // In Collection case
             _requestRandomWords(type(uint).max);
+            requestStatus[type(uint).max] = RequestStatus.Requested;
         } else {
             // Seperated Collection case
             require(realNFTForSeperatedCollection != address(0), "no realNFT address yet");
@@ -112,12 +111,10 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
 
     /* VIEW FUNCTIONS */
     function tokenURI(uint tokenId) public view virtual override returns (string memory) {
-        if (!_exists(tokenId)) {
-            revert NonexistentId({tokenId: tokenId});
-        }
+        require(_exists(tokenId), "NonexistentId");
         if (requestStatus[tokenId] != RequestStatus.FulFilled) {
             return bytes(unrevealedURI).length > 0
-            ? string(abi.encodePacked(unrevealedURI, tokenId.toString()))
+            ? unrevealedURI
             : "";
         }
 
@@ -205,6 +202,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
             Constant.CALL_BACK_GAS_LIMIT,
             numWords
         );
+        tokenIdToRequestId[tokenId] = _requestId;
         requestIdToTokenId[_requestId] = tokenId;
     }
 

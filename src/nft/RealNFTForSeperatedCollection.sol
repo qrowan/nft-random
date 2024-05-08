@@ -13,8 +13,6 @@ contract RealNFTForSeperatedCollection is ERC721Upgradeable, Ownable2StepUpgrade
     address public unrevealedNFT;
     mapping(uint => uint) public words;
 
-    error NonexistentId(uint tokenId);
-
     modifier onlyUnrevealedNFT() {
         require(msg.sender == unrevealedNFT, "Only Unrevealed NFT");
         _;
@@ -40,9 +38,7 @@ contract RealNFTForSeperatedCollection is ERC721Upgradeable, Ownable2StepUpgrade
 
     /* VIEW FUNCTIONS */
     function tokenURI(uint tokenId) public view virtual override returns (string memory) {
-        if (!_exists(tokenId)) {
-            revert NonexistentId({tokenId: tokenId});
-        }
+        require(!_exists(tokenId), "NonexistentId");
 
         return bytes(baseURI).length > 0
             ? string(abi.encodePacked(baseURI, words[tokenId].toString(), ".png"))
