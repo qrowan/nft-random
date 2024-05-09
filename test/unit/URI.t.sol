@@ -65,7 +65,7 @@ contract URITest is Setup {
             userPurchase(user);
         }
         startRevealInCollection();
-        uint requestId = nft.tokenIdToRequestId(type(uint).max);
+        (uint requestId,,) = nft.requests(type(uint).max);
         mockFulFill(requestId);
         for (uint i; i < nft.MAX_SUPPLY(); i++) {
             console.log(i, "th URI : ", nft.tokenURI(i));
@@ -80,7 +80,8 @@ contract URITest is Setup {
         for (uint i; i < nft.MAX_SUPPLY(); i++) {
             vm.prank(user);
             nft.reveal(i);
-            mockFulFill(nft.tokenIdToRequestId(i));
+            (uint requestId,,) = nft.requests(i);
+            mockFulFill(requestId);
         }
         for (uint i; i < nft.MAX_SUPPLY(); i++) {
             console.log(i, "th URI : ", realNFTForSeperatedCollection.tokenURI(i));

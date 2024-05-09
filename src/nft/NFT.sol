@@ -14,6 +14,12 @@ import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interface
 contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upgradeable {
     using StringsUpgradeable for uint256;
 
+    struct Request {
+        uint requestId;
+        RequestStatus status;
+        uint randomWord;
+    }
+
     uint public price; // price for 1 NFT
     string public unrevealedURI;
     string public baseURI;
@@ -28,10 +34,9 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
 
     // VRF V2
     uint64 public subscriptionId;
-    mapping(uint => RequestStatus) public requestStatus; // 0: not requested, 1: requested, 2: fulfilled
+
+    mapping(uint => Request) public requests; // tokenId to request
     mapping(uint => uint) public requestIdToTokenId;
-    mapping(uint => uint) public tokenIdToRequestId;
-    mapping(uint => uint) public randomWords;
     bytes32 public keyHash;
     uint16 public requestConfirmation = 3;
     uint32 public callbackGasLimit;
@@ -107,8 +112,8 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
 
         if (strategy() == RevealStrategy.InCollection) {
             // In Collection case
-            require(requestStatus[type(uint).max] == RequestStatus.NotRequested, "Already requested");
-            requestStatus[type(uint).max] = RequestStatus.Requested;
+            require(requests[type(uint).max].status == RequestStatus.NotRequested, "Already requested");
+            requests[type(uint).max].status = RequestStatus.Requested;
             _requestRandomWords(type(uint).max);
         } else {
             // Seperated Collection case
@@ -134,13 +139,13 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     function tokenURI(uint _tokenId) public view virtual override returns (string memory) {
         require(_exists(_tokenId), "NonexistentId");
         if (strategy() == RevealStrategy.InCollection) {
-            if (requestStatus[type(uint).max] != RequestStatus.FulFilled) {
+            if (requests[type(uint).max].status != RequestStatus.FulFilled) {
                 return bytes(unrevealedURI).length > 0
                     ? unrevealedURI
                     : "";
             }
         } else {
-            if (requestStatus[_tokenId] != RequestStatus.FulFilled) {
+            if (requests[_tokenId].status != RequestStatus.FulFilled) {
                 return bytes(unrevealedURI).length > 0
                 ? unrevealedURI
                 : "";
@@ -149,7 +154,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
 
         // Only when revealed with InCollection Strategy and tokenOwner's request fulfilled
         return bytes(baseURI).length > 0
-            ? string(abi.encodePacked(baseURI, _convert(randomWords[_tokenId]).toString(), ".png"))
+            ? string(abi.encodePacked(baseURI, _convert(requests[_tokenId].randomWord).toString(), ".png"))
             : "";
     }
 
@@ -203,9 +208,9 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
 
     // Seperated Str
     function reveal(uint _tokenId) external onlyNFTOwner(_tokenId) onlySeperatedCollectionStrategy {
-        require(requestStatus[_tokenId] == RequestStatus.NotRequested, "Already requested");
+        require(requests[_tokenId].status == RequestStatus.NotRequested, "Already requested");
         _burn(_tokenId);
-        requestStatus[_tokenId] = RequestStatus.Requested;
+        requests[_tokenId].status = RequestStatus.Requested;
         _requestRandomWords(_tokenId);
     }
 
@@ -229,7 +234,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
             Constant.CALL_BACK_GAS_LIMIT,
             _numWords
         );
-        tokenIdToRequestId[_tokenId] = _requestId;
+        requests[_tokenId].requestId = _requestId;
         requestIdToTokenId[_requestId] = _tokenId;
     }
 
@@ -237,20 +242,20 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         uint256 _requestId, uint256[] memory _randomWords
     ) internal override {
         uint _tokenId = requestIdToTokenId[_requestId];
-        require(requestStatus[_tokenId] == RequestStatus.Requested, "Not requested or already fulfilled");
+        require(requests[_tokenId].status == RequestStatus.Requested, "Not requested or already fulfilled");
 
         if (strategy() == RevealStrategy.InCollection) {
             // In Collection case
             require(_tokenId == type(uint).max, "Only In Collection"); // impossible. double check
             for (uint i; i < _randomWords.length; i++) {
-                randomWords[i] = _randomWords[i];
+                requests[i].randomWord = requests[i].randomWord;
             }
         } else {
             // Seperated Collection case
             require(_tokenId != type(uint).max, "Only Seperated Collection"); // impossible. double check
-            IRealNFTForSeperatedCollection(realNFTForSeperatedCollection).mint(_tokenId, _convert(_randomWords[0]));
+            IRealNFTForSeperatedCollection(realNFTForSeperatedCollection).mint(_tokenId, _convert(requests[0].randomWord));
         }
 
-        requestStatus[_tokenId] = RequestStatus.FulFilled;
+        requests[_tokenId].status = RequestStatus.FulFilled;
     }
 }

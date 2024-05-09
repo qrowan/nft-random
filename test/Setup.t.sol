@@ -87,7 +87,7 @@ contract Setup is Test, TestUtils {
     // @dev only for test. For real, chainlink calls rawFulfillRandomWords
     function mockFulFill(uint requestId) internal {
         uint tokenId = nft.requestIdToTokenId(requestId);
-        NFT.RequestStatus status = nft.requestStatus(tokenId);
+        (,NFT.RequestStatus status,) = nft.requests(tokenId);
         require(status == NFT.RequestStatus.Requested, "not requested");
 
         if (uint(nft.strategy()) == 0) { // RevealStrategy.InCollection
