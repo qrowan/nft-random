@@ -1,9 +1,3 @@
-# <h1 align="center"> Forge Template </h1>
-
-**Template repository for getting started quickly with Foundry projects**
-
-![Github Actions](https://github.com/foundry-rs/forge-template/workflows/CI/badge.svg)
-
 ## Getting Started
 
 ### Install global tools
@@ -55,4 +49,4 @@ forge test --mt testShowLiveData -vv
 * wallet used (deployer)      : 0xA9f0C55a0d8FC0bcE1027e60b42DcbF5D6D7b56d
 * chainlink VRF2 Subscription : https://vrf.chain.link/sepolia/11624
 * etherscan log               : https://sepolia.etherscan.io/address/0xA9f0C55a0d8FC0bcE1027e60b42DcbF5D6D7b56d
-
+* wakatime link               : https://wakatime.com/@Rowan/projects/uhqvyfxwec?start=2024-05-05&end=2024-05-09
