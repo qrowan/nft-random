@@ -74,7 +74,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     /* INITIALIZE */
-    function initialize() public initializer {
+    function initialize() external initializer {
         // init inherited contracts
         __ERC721_init("" , "");
         __Ownable2Step_init();
@@ -97,7 +97,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     /* MANAGEMENT FUNCTIONS */
-    function addFund(uint _amount) public nonReentrant {
+    function addFund(uint _amount) external nonReentrant {
         LINK.transferFrom(msg.sender, address(this), _amount);
         LINK.transferAndCall(address(COORDINATOR), _amount, abi.encode(subscriptionId));
         emit FundAdded(_amount);
@@ -181,7 +181,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         }
     }
 
-    function linkBalance() public view returns (uint _balance) {
+    function linkBalance() external view returns (uint _balance) {
         (_balance,,,) = COORDINATOR.getSubscription(subscriptionId);
     }
 
@@ -202,7 +202,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     /* MUTATIVE FUNCTIONS */
-    function purchase(uint _mintAmount) public payable nonReentrant  {
+    function purchase(uint _mintAmount) external payable nonReentrant  {
         require(!hasRevealStarted, "Already reveal started");
         uint _pay = price * _mintAmount;
         require(msg.value >= _pay, "Not enough");

@@ -20,7 +20,7 @@ contract RealNFTForSeperatedCollection is ERC721Upgradeable, Ownable2StepUpgrade
     }
 
     /* INITIALIZE */
-    function initialize(address _unrevealedNFT) public initializer {
+    function initialize(address _unrevealedNFT) external initializer {
         // init inherited contracts
         __ERC721_init("Rowan's NFT" , "ROWAN");
         __Ownable2Step_init();
@@ -31,7 +31,7 @@ contract RealNFTForSeperatedCollection is ERC721Upgradeable, Ownable2StepUpgrade
     }
 
     /* RESTRICTED FUNCTIONS */
-    function mint(uint _tokenId, uint _word) public onlyUnrevealedNFT {
+    function mint(uint _tokenId, uint _word) external onlyUnrevealedNFT {
         require(!_exists(_tokenId), "Already existId");
         _mint(msg.sender, _tokenId);
         words[_tokenId] = _word;
