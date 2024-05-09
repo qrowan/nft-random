@@ -42,11 +42,6 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     uint16 public requestConfirmation = 3;
     uint32 public callbackGasLimit;
 
-//Constant.KEY_HASH,
-//subscriptionId,
-//Constant.REQUEST_CONFIRMATIONS,
-//Constant.CALL_BACK_GAS_LIMIT,
-
     enum RevealStrategy {
         InCollection,
         SeperatedCollection,
@@ -59,11 +54,14 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         FulFilled
     }
 
+    event FundAdded(uint amount);
+    event SeperatedCollectionStrategySelected(address realNFT);
+    event RevealStarted(RevealStrategy strategy);
+    event PriceSet(uint price);
+    event VRFConfigSet(bytes32 keyHash, uint16 requestConfirmation, uint32 callbackGasLimit);
+    event FeesWithdrawn(uint fee);
+
     /* MODIFIERS */
-    modifier onlyInCollectionStrategy {
-        require(realNFTForSeperatedCollection == address(0), "Only InCollection");
-        _;
-    }
 
     modifier onlySeperatedCollectionStrategy {
         require(realNFTForSeperatedCollection != address(0), "Only SeperatedCollection");
@@ -86,7 +84,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         // set variables
         baseURI = Constant.BASE_URI;
         unrevealedURI = Constant.UNREVEALED_URI;
-        price = 0.00001 ether;
+        price = Constant.PRICE;
         COORDINATOR = VRFCoordinatorV2Interface(Constant.VRF_COORDINATOR);
         LINK = LinkTokenInterface(Constant.LINK);
         keyHash = Constant.KEY_HASH;
@@ -102,10 +100,12 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     function addFund(uint _amount) public nonReentrant {
         LINK.transferFrom(msg.sender, address(this), _amount);
         LINK.transferAndCall(address(COORDINATOR), _amount, abi.encode(subscriptionId));
+        emit FundAdded(_amount);
     }
 
     function setRealNFT(address _realNFTForSeperatedCollection) external onlyOwner {
         realNFTForSeperatedCollection = _realNFTForSeperatedCollection;
+        emit SeperatedCollectionStrategySelected(_realNFTForSeperatedCollection);
     }
 
     function startReveal() external onlyOwner {
@@ -121,9 +121,15 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
             // Seperated Collection case
             require(realNFTForSeperatedCollection != address(0), "no realNFT address yet");
         }
+        emit RevealStarted(strategy());
     }
 
-    function setVFTConfig(
+    function setPrice(uint _price) external onlyOwner {
+        price = _price;
+        emit PriceSet(_price);
+    }
+
+    function setVRFConfig(
         bytes32 _keyHash,
         uint16 _requestConfirmation,
         uint32 _callbackGasLimit
@@ -131,10 +137,13 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         keyHash = _keyHash;
         requestConfirmation = _requestConfirmation;
         callbackGasLimit = _callbackGasLimit;
+        emit VRFConfigSet(_keyHash, _requestConfirmation, _callbackGasLimit);
     }
 
     function withdrawFee() external onlyOwner {
-        payable(owner()).transfer(address(this).balance);
+        uint _fee = address(this).balance;
+        payable(owner()).transfer(_fee);
+        emit FeesWithdrawn(_fee);
     }
 
     /* VIEW FUNCTIONS */

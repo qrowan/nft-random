@@ -5,7 +5,7 @@ library Constant {
     address public constant LINK = 0x779877A7B0D9E8603169DdbD7836e478b4624789;
     address public constant VRF_COORDINATOR = 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625;
     bytes32 public constant KEY_HASH = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
-    uint public constant PREMIUM = 0.25 ether;
+    uint public constant PRICE = 0.0001 ether;
 
     uint32 public constant CALL_BACK_GAS_LIMIT = 10000;
     uint16 public constant REQUEST_CONFIRMATIONS = 3;
