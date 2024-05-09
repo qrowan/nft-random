@@ -6,12 +6,13 @@ import "../interfaces/IRealNFTForSeperatedCollection.sol";
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import {VRFConsumerBaseV2Upgradeable} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Upgradeable.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 
-contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upgradeable {
+contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upgradeable, ReentrancyGuardUpgradeable {
     using StringsUpgradeable for uint256;
 
     struct Request {
@@ -79,6 +80,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         // init inherited contracts
         __ERC721_init("" , "");
         __Ownable2Step_init();
+        __ReentrancyGuard_init();
         __VRFConsumerBaseV2_init(Constant.VRF_COORDINATOR);
 
         // set variables
@@ -97,7 +99,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     /* MANAGEMENT FUNCTIONS */
-    function addFund(uint _amount) public {
+    function addFund(uint _amount) public nonReentrant {
         LINK.transferFrom(msg.sender, address(this), _amount);
         LINK.transferAndCall(address(COORDINATOR), _amount, abi.encode(subscriptionId));
     }
@@ -191,7 +193,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     /* MUTATIVE FUNCTIONS */
-    function purchase(uint _mintAmount) public payable {
+    function purchase(uint _mintAmount) public payable nonReentrant  {
         require(!hasRevealStarted, "Already reveal started");
         uint _pay = price * _mintAmount;
         require(msg.value >= _pay, "Not enough");
@@ -207,7 +209,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     // Seperated Str
-    function reveal(uint _tokenId) external onlyNFTOwner(_tokenId) onlySeperatedCollectionStrategy {
+    function reveal(uint _tokenId) external onlyNFTOwner(_tokenId) onlySeperatedCollectionStrategy nonReentrant  {
         require(requests[_tokenId].status == RequestStatus.NotRequested, "Already requested");
         _burn(_tokenId);
         requests[_tokenId].status = RequestStatus.Requested;
@@ -240,7 +242,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
 
     function fulfillRandomWords(
         uint256 _requestId, uint256[] memory _randomWords
-    ) internal override {
+    ) internal override nonReentrant {
         uint _tokenId = requestIdToTokenId[_requestId];
         require(requests[_tokenId].status == RequestStatus.Requested, "Not requested or already fulfilled");
 
