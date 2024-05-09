@@ -21,8 +21,19 @@ contract Deploy is TestUtils {
         vm.startBroadcast(deployerPrivateKey);
         ProxyAdmin proxyAdmin = new ProxyAdmin();
         NFT _nft = new NFT();
+        RealNFTForSeperatedCollection _realNft = new RealNFTForSeperatedCollection();
+
         NFT nft = NFT(_makeBeaconProxy(proxyAdmin, address(_nft)));
+        RealNFTForSeperatedCollection realNFTForSeperatedCollection = RealNFTForSeperatedCollection(
+            _makeBeaconProxy(proxyAdmin, address(_realNft))
+        );
+
         nft.initialize();
+        realNFTForSeperatedCollection.initialize(address(nft));
+
+        LinkTokenInterface(Constant.LINK).approve(address(nft), 30 ether);
+        nft.addFund(30 ether);
+
         vm.stopBroadcast();
     }
 }

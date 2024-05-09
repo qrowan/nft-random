@@ -46,4 +46,15 @@ contract BaseTest is Setup {
     function testRevealInCollection() public {
         startRevealInCollection();
     }
+
+    function testWithdrawFee() public {
+        userPurchase(user);
+        userPurchase(user);
+        userPurchase(user);
+
+        vm.prank(deployer);
+        nft.withdrawFee();
+
+        assertEq(deployer.balance, 3 * nft.price(), "wrong fee");
+    }
 }

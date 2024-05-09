@@ -32,6 +32,14 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     mapping(uint => uint) public requestIdToTokenId;
     mapping(uint => uint) public tokenIdToRequestId;
     mapping(uint => uint) public randomWords;
+    bytes32 public keyHash;
+    uint16 public requestConfirmation = 3;
+    uint32 public callbackGasLimit;
+
+//Constant.KEY_HASH,
+//subscriptionId,
+//Constant.REQUEST_CONFIRMATIONS,
+//Constant.CALL_BACK_GAS_LIMIT,
 
     enum RevealStrategy {
         InCollection,
@@ -74,6 +82,9 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         price = 0.00001 ether;
         COORDINATOR = VRFCoordinatorV2Interface(Constant.VRF_COORDINATOR);
         LINK = LinkTokenInterface(Constant.LINK);
+        keyHash = Constant.KEY_HASH;
+        requestConfirmation = Constant.REQUEST_CONFIRMATIONS;
+        callbackGasLimit = Constant.CALL_BACK_GAS_LIMIT;
 
         // create subscription to Chainlink VRF2
         subscriptionId = COORDINATOR.createSubscription();
@@ -103,6 +114,16 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
             // Seperated Collection case
             require(realNFTForSeperatedCollection != address(0), "no realNFT address yet");
         }
+    }
+
+    function setVFTConfig(
+        bytes32 _keyHash,
+        uint16 _requestConfirmation,
+        uint32 _callbackGasLimit
+    ) external onlyOwner {
+        keyHash = _keyHash;
+        requestConfirmation = _requestConfirmation;
+        callbackGasLimit = _callbackGasLimit;
     }
 
     function withdrawFee() external onlyOwner {

@@ -40,9 +40,9 @@ contract Setup is Test, TestUtils {
             LINK.transfer(address(proxyAdmin), 100 ether);
             NFT _nft = new NFT();
             nft = NFT(_makeBeaconProxy(proxyAdmin, address(_nft)));
-            RealNFTForSeperatedCollection _realNFT = new RealNFTForSeperatedCollection();
+            RealNFTForSeperatedCollection _realNft = new RealNFTForSeperatedCollection();
             realNFTForSeperatedCollection = RealNFTForSeperatedCollection(
-                _makeBeaconProxy(proxyAdmin, address(_realNFT))
+                _makeBeaconProxy(proxyAdmin, address(_realNft))
             );
 
             nft.initialize();
@@ -109,24 +109,4 @@ contract Setup is Test, TestUtils {
     function convert(uint a) internal pure returns (uint) {
         return a % 25;
     }
-//
-//
-//    function testRevealInCollection() public {
-//        assertTrue(!nft.hasRevealStarted(), "hasRevealStarted before reveal");
-//        revealInCollection();
-//        assertTrue(nft.hasRevealStarted(), "hasRevealStarted after reveal");
-//    }
-//
-//
-//
-////    function testPurchaseMaxFail() public {
-////        vm.deal(user, rowanNFT.price() * rowanNFT.MAX_SUPPLY() + 1);
-////        vm.prank(user);
-////        rowanNFT.mint{value: user.balance}(rowanNFT.MAX_SUPPLY());
-////    }
-//
-//
-//    function testLogSubscriptionId() public view {
-//        console.log("Subscription ID ", nft.subscriptionId());
-//    }
 }
