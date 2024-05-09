@@ -17,6 +17,7 @@ yarn
 forge install
 foundryup # update foundry
 forge build # compile contracts
+source .env
 ```
 
 ## Test
@@ -30,3 +31,11 @@ forge test --mt testDeploy -vv # example
 ```sh
 forge script script/Deploy.s.sol:Deploy --broadcast --verify -vvvv
 ```
+## Check Live Data Deployed
+```sh
+forge test --mt testShowLiveData -vv
+```
+* wallet used (deployer)      : 0xA9f0C55a0d8FC0bcE1027e60b42DcbF5D6D7b56d
+* chainlink VRF2 Subscription : https://vrf.chain.link/sepolia/11624
+* etherscan log               : https://sepolia.etherscan.io/address/0xA9f0C55a0d8FC0bcE1027e60b42DcbF5D6D7b56d
+

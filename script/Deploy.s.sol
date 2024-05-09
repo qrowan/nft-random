@@ -31,8 +31,8 @@ contract Deploy is TestUtils {
         nft.initialize();
         realNFTForSeperatedCollection.initialize(address(nft));
 
-        LinkTokenInterface(Constant.LINK).approve(address(nft), 20 ether);
-        nft.addFund(20 ether);
+        LinkTokenInterface(Constant.LINK).approve(address(nft), 13 ether);
+        nft.addFund(13 ether);
 
         vm.stopBroadcast();
     }

@@ -6,6 +6,7 @@ import "../libraries/Constant.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
+/// @notice the real NFT only used in Seperated-Collection strategy. It contains the real URI
 contract RealNFTForSeperatedCollection is ERC721Upgradeable, Ownable2StepUpgradeable {
     using StringsUpgradeable for uint256;
 

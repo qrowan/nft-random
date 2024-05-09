@@ -12,6 +12,10 @@ import {VRFConsumerBaseV2Upgradeable} from "@chainlink/contracts/src/v0.8/vrf/de
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 
+/// @notice Regardless of the strategy, users can mint their initial NFTs through this contract with all NFTs containing
+///         a default URI. If an owner chooses the In-Collection strategy, upon reveal, all NFTs from this contract will
+///         later include randomly determined actual URIs. Conversely, opting for the Seperated-Collection strategy
+///         allows users to reveal their NFTs at their discretion, revealing their actual URIs shortly thereafter.
 contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upgradeable, ReentrancyGuardUpgradeable {
     using StringsUpgradeable for uint256;
 
@@ -21,25 +25,39 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         uint randomWord;
     }
 
-    uint public price; // price for 1 NFT
+    /// @notice price of purchasing NFT
+    uint public price;
+    /// @notice URI when unrevealed. all NFT have the same unrevealedURI
     string public unrevealedURI;
+    /// @notice base URI that attached to tokenId for the revealed URI
     string public baseURI;
+    /// @notice After users' purchasing, the contract owner starts to reveal
     bool public hasRevealStarted;
 
+    /// @notice how many NFT minted
     uint public tokenLength;
+    /// @notice max amount of minting
     uint public constant MAX_SUPPLY = 5;
 
+    /// @notice Chainlink's VRF(Verifiable Randomness Function) service contract to request and recieve random values
     VRFCoordinatorV2Interface public COORDINATOR;
+    /// @notice fee token for VRF
     LinkTokenInterface public LINK;
+    /// @notice real NFT contract when the owner chooses "Seperated Collection strategy"
+    ///         Before owner starts revealing, if this address has set then revealing progressed with "Seperated Collection strategy", else "In Collection strategy"
     address public realNFTForSeperatedCollection;
 
-    // VRF V2
+    /// @notice Subscription ID for VRF set when initializing
     uint64 public subscriptionId;
 
-    mapping(uint => Request) public requests; // tokenId to request
+    /// @notice request info by tokenId
+    mapping(uint => Request) public requests;
+    /// @notice mapping requestId To TokenId
     mapping(uint => uint) public requestIdToTokenId;
+
+    /// @notice configs for VRF
     bytes32 public keyHash;
-    uint16 public requestConfirmation = 3;
+    uint16 public requestConfirmation;
     uint32 public callbackGasLimit;
 
     enum RevealStrategy {
@@ -62,7 +80,6 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     event FeesWithdrawn(uint fee);
 
     /* MODIFIERS */
-
     modifier onlySeperatedCollectionStrategy {
         require(realNFTForSeperatedCollection != address(0), "Only SeperatedCollection");
         _;
@@ -97,17 +114,23 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     /* MANAGEMENT FUNCTIONS */
+    /// @notice charge LINK for use of VRF
     function addFund(uint _amount) external nonReentrant {
         LINK.transferFrom(msg.sender, address(this), _amount);
         LINK.transferAndCall(address(COORDINATOR), _amount, abi.encode(subscriptionId));
         emit FundAdded(_amount);
     }
 
+    /// @notice setting this address means choosing "Seperated Collection Strategy" and should set the real NFT address
     function setRealNFT(address _realNFTForSeperatedCollection) external onlyOwner {
+        require(!hasRevealStarted, "Already reveal started");
         realNFTForSeperatedCollection = _realNFTForSeperatedCollection;
         emit SeperatedCollectionStrategySelected(_realNFTForSeperatedCollection);
     }
 
+    /// @notice After users' purchasing, owner starts revealing.
+    ///         1. In-Collection        : All URIs are revealed immediately
+    ///         2. Seperated-Collection : Users reveal their NFTs when they want
     function startReveal() external onlyOwner {
         require(!hasRevealStarted, "Already reveal started");
         hasRevealStarted = true;
@@ -169,6 +192,9 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
             : "";
     }
 
+    /// @notice In-Collection or Seperated-Collection strategy
+    ///         1. In-Collection        : Request random words to VRF. After fulfillment of VRF, Immediately all users' URIs are decided and revealed.
+    ///         2. Seperated-Collection : Users can reveal their token by themselves with calling reveal when they want
     function strategy() public view returns (RevealStrategy) {
         if (!hasRevealStarted) {
             return RevealStrategy.NotDecidedYet;
@@ -181,10 +207,12 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         }
     }
 
+    /// @notice LINK charged. if not enough, owner should charge by calling addFund
     function linkBalance() external view returns (uint _balance) {
         (_balance,,,) = COORDINATOR.getSubscription(subscriptionId);
     }
 
+    /// @notice In In-Collection, changes to real name after starts revealing otherwise in Seperated Collection, unrevealed name lasted
     function name() public view override returns (string memory) {
         if (!hasRevealStarted || strategy() == RevealStrategy.SeperatedCollection) {
             return "Unrevealed Rowan's NFT";
@@ -202,6 +230,8 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     /* MUTATIVE FUNCTIONS */
+    /// @notice purchase NFT. Any change will be returned
+    /// @param _mintAmount how many NFT sender wants to mint
     function purchase(uint _mintAmount) external payable nonReentrant  {
         require(!hasRevealStarted, "Already reveal started");
         uint _pay = price * _mintAmount;
@@ -217,7 +247,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         }
     }
 
-    // Seperated Str
+    /// @notice revealing function called by user in "Seperated Collection". This burns existing NFTs, and user can get real NFT after Chainlink's fulfillment
     function reveal(uint _tokenId) external onlyNFTOwner(_tokenId) onlySeperatedCollectionStrategy nonReentrant  {
         require(requests[_tokenId].status == RequestStatus.NotRequested, "Already requested");
         _burn(_tokenId);
@@ -225,6 +255,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         _requestRandomWords(_tokenId);
     }
 
+    // @notice retry request when failed. This should be called after fixing VRFConfig
     function retryRequest(uint _tokenId) public onlyOwner {
         require(requests[_tokenId].status != RequestStatus.Fulfilled, "Already fulfilled");
         _requestRandomWords(_tokenId);
@@ -255,6 +286,8 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         requestIdToTokenId[_requestId] = _tokenId;
     }
 
+    /// @dev This will be called in rawFulfillRandomWords in inherited contract by Chainlink's coordinator.
+    ///      Takes 1~5 minutes approximately. After this, users can see the revealed URI
     function fulfillRandomWords(
         uint256 _requestId, uint256[] memory _randomWords
     ) internal override nonReentrant {

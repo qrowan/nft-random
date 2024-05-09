@@ -7,13 +7,16 @@ library Constant {
     bytes32 public constant KEY_HASH = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
     uint public constant PRICE = 0.0001 ether;
 
-    uint32 public constant CALL_BACK_GAS_LIMIT = 10000;
+    uint32 public constant CALL_BACK_GAS_LIMIT = 1000000;
     uint16 public constant REQUEST_CONFIRMATIONS = 3;
 
     string public constant BASE_URI = "https://storage.googleapis.com/opensea-prod.appspot.com/puffs/";
     string public constant UNREVEALED_URI = "https://openseacreatures.io/";
 
-    // sample
-    address public constant VRF_V2_CONSUMER = 0x51602415DD645d9e48FCBD21a00094453d4118f4; // sample
-    uint64 public constant SUBSCRIPTION_ID = 11604; // sample
+    // deployer
+    uint64 public constant SUBSCRIPTION_ID = 11629;
+    address public constant DEPLOYER = 0xA9f0C55a0d8FC0bcE1027e60b42DcbF5D6D7b56d;
+    address public constant PROXY_ADMIN = 0x31d9b6E1A0a76627cFe48A8d03995F621d5fB017;
+    address public constant NFT = 0x08AE0f0a7DcA7b4dDa12d682934eFF48F3241F09;
+    address public constant REAL_NFT_FOR_SEPERATED_COLLECTION = 0x510A6E848B33E1461A5BA2a10D73fB7b806A398d;
 }
