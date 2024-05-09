@@ -171,9 +171,9 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
 
     function name() public view override returns (string memory) {
         if (!hasRevealStarted || strategy() == RevealStrategy.SeperatedCollection) {
-            return "Unrevealed Rowan' NFT";
+            return "Unrevealed Rowan's NFT";
         }  else {
-            return "Rowan' NFT";
+            return "Rowan's NFT";
         }
     }
 

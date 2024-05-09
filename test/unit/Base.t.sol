@@ -6,9 +6,27 @@ import {Setup} from "test/Setup.t.sol";
 contract BaseTest is Setup {
     function testDeploy() public {}
 
-    function testNameAndSymbol() public view {
-        assertEq(nft.name(), "Unrevealed Rowan' NFT", "wrong name");
+    function testNameAndSymbolInCollection() public {
+        assertEq(nft.name(), "Unrevealed Rowan's NFT", "wrong name");
         assertEq(nft.symbol(), "uROWAN", "wrong symbol");
+        vm.startPrank(deployer);
+        nft.startReveal();
+        vm.stopPrank();
+        assertEq(nft.name(), "Rowan's NFT", "wrong name");
+        assertEq(nft.symbol(), "ROWAN", "wrong symbol");
+    }
+
+    function testNameAndSymbolSeperatedCollection() public {
+        assertEq(nft.name(), "Unrevealed Rowan's NFT", "wrong name");
+        assertEq(nft.symbol(), "uROWAN", "wrong symbol");
+        vm.startPrank(deployer);
+        nft.setRealNFT(address(realNFTForSeperatedCollection));
+        nft.startReveal();
+        vm.stopPrank();
+        assertEq(nft.name(), "Unrevealed Rowan's NFT", "wrong name");
+        assertEq(nft.symbol(), "uROWAN", "wrong symbol");
+        assertEq(realNFTForSeperatedCollection.name(), "Rowan's NFT", "wrong name");
+        assertEq(realNFTForSeperatedCollection.symbol(), "ROWAN", "wrong symbol");
     }
 
     function testOwnership() public {
