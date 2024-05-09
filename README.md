@@ -26,4 +26,7 @@ forge test
 forge test --mt testDeploy -vv # example
 ```
 
-#
+## Deploy
+```sh
+forge script script/Deploy.s.sol:Deploy --broadcast --verify -vvvv
+```

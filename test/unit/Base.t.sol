@@ -75,4 +75,13 @@ contract BaseTest is Setup {
 
         assertEq(deployer.balance, 3 * nft.price(), "wrong fee");
     }
+
+    function testRetry() public {
+        userPurchase(user);
+        startRevealInCollection();
+        vm.startPrank(deployer);
+        nft.setVRFConfig(nft.keyHash(), nft.requestConfirmation(), nft.callbackGasLimit() * 100 / 10);
+        nft.retryRequest(type(uint).max);
+        vm.stopPrank();
+    }
 }

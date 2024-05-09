@@ -51,7 +51,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     enum RequestStatus {
         NotRequested,
         Requested,
-        FulFilled
+        Fulfilled
     }
 
     event FundAdded(uint amount);
@@ -150,13 +150,13 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     function tokenURI(uint _tokenId) public view virtual override returns (string memory) {
         require(_exists(_tokenId), "NonexistentId");
         if (strategy() == RevealStrategy.InCollection) {
-            if (requests[type(uint).max].status != RequestStatus.FulFilled) {
+            if (requests[type(uint).max].status != RequestStatus.Fulfilled) {
                 return bytes(unrevealedURI).length > 0
                     ? unrevealedURI
                     : "";
             }
         } else {
-            if (requests[_tokenId].status != RequestStatus.FulFilled) {
+            if (requests[_tokenId].status != RequestStatus.Fulfilled) {
                 return bytes(unrevealedURI).length > 0
                 ? unrevealedURI
                 : "";
@@ -225,6 +225,12 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         _requestRandomWords(_tokenId);
     }
 
+    function retryRequest(uint _tokenId) public onlyOwner {
+        require(requests[_tokenId].status != RequestStatus.Fulfilled, "Already fulfilled");
+        _requestRandomWords(_tokenId);
+    }
+
+
     /* INTERNAL FUNCTIONS */
     function _baseURI() internal view virtual override returns (string memory) {
         return baseURI;
@@ -239,10 +245,10 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         uint32 _numWords = strategy() == RevealStrategy.InCollection ? uint32(MAX_SUPPLY) : 1;
         // Will revert if subscription is not set and funded.
         uint _requestId = COORDINATOR.requestRandomWords(
-            Constant.KEY_HASH,
+            keyHash,
             subscriptionId,
-            Constant.REQUEST_CONFIRMATIONS,
-            Constant.CALL_BACK_GAS_LIMIT,
+            requestConfirmation,
+            callbackGasLimit,
             _numWords
         );
         requests[_tokenId].requestId = _requestId;
@@ -259,14 +265,15 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
             // In Collection case
             require(_tokenId == type(uint).max, "Only In Collection"); // impossible. double check
             for (uint i; i < _randomWords.length; i++) {
-                requests[i].randomWord = requests[i].randomWord;
+                requests[i].randomWord = _randomWords[i];
             }
         } else {
             // Seperated Collection case
             require(_tokenId != type(uint).max, "Only Seperated Collection"); // impossible. double check
-            IRealNFTForSeperatedCollection(realNFTForSeperatedCollection).mint(_tokenId, _convert(requests[0].randomWord));
+            requests[_tokenId].randomWord = _randomWords[0];
+            IRealNFTForSeperatedCollection(realNFTForSeperatedCollection).mint(_tokenId, _convert(_randomWords[0]));
         }
 
-        requests[_tokenId].status = RequestStatus.FulFilled;
+        requests[_tokenId].status = RequestStatus.Fulfilled;
     }
 }
