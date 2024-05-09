@@ -31,18 +31,18 @@ contract RealNFTForSeperatedCollection is ERC721Upgradeable, Ownable2StepUpgrade
     }
 
     /* RESTRICTED FUNCTIONS */
-    function mint(uint tokenId, uint word) public onlyUnrevealedNFT {
-        require(!_exists(tokenId), "Already existId");
-        _mint(msg.sender, tokenId);
-        words[tokenId] = word;
+    function mint(uint _tokenId, uint _word) public onlyUnrevealedNFT {
+        require(!_exists(_tokenId), "Already existId");
+        _mint(msg.sender, _tokenId);
+        words[_tokenId] = _word;
     }
 
     /* VIEW FUNCTIONS */
-    function tokenURI(uint tokenId) public view virtual override returns (string memory) {
-        require(_exists(tokenId), "NonexistentId");
+    function tokenURI(uint _tokenId) public view virtual override returns (string memory) {
+        require(_exists(_tokenId), "NonexistentId");
 
         return bytes(baseURI).length > 0
-            ? string(abi.encodePacked(baseURI, words[tokenId].toString(), ".png"))
+            ? string(abi.encodePacked(baseURI, words[_tokenId].toString(), ".png"))
             : "";
     }
 

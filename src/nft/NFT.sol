@@ -64,8 +64,8 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         _;
     }
 
-    modifier onlyNFTOwner(uint tokenId) {
-        require(_ownerOf(tokenId) == msg.sender, "Only NFT Owner");
+    modifier onlyNFTOwner(uint _tokenId) {
+        require(_ownerOf(_tokenId) == msg.sender, "Only NFT Owner");
         _;
     }
 
@@ -92,9 +92,9 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     /* MANAGEMENT FUNCTIONS */
-    function addFund(uint amount) public {
-        LINK.transferFrom(msg.sender, address(this), amount);
-        LINK.transferAndCall(address(COORDINATOR), amount, abi.encode(subscriptionId));
+    function addFund(uint _amount) public {
+        LINK.transferFrom(msg.sender, address(this), _amount);
+        LINK.transferAndCall(address(COORDINATOR), _amount, abi.encode(subscriptionId));
     }
 
     function setRealNFT(address _realNFTForSeperatedCollection) external onlyOwner {
@@ -131,8 +131,8 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     /* VIEW FUNCTIONS */
-    function tokenURI(uint tokenId) public view virtual override returns (string memory) {
-        require(_exists(tokenId), "NonexistentId");
+    function tokenURI(uint _tokenId) public view virtual override returns (string memory) {
+        require(_exists(_tokenId), "NonexistentId");
         if (strategy() == RevealStrategy.InCollection) {
             if (requestStatus[type(uint).max] != RequestStatus.FulFilled) {
                 return bytes(unrevealedURI).length > 0
@@ -140,7 +140,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
                     : "";
             }
         } else {
-            if (requestStatus[tokenId] != RequestStatus.FulFilled) {
+            if (requestStatus[_tokenId] != RequestStatus.FulFilled) {
                 return bytes(unrevealedURI).length > 0
                 ? unrevealedURI
                 : "";
@@ -149,7 +149,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
 
         // Only when revealed with InCollection Strategy and tokenOwner's request fulfilled
         return bytes(baseURI).length > 0
-            ? string(abi.encodePacked(baseURI, _convert(randomWords[tokenId]).toString(), ".png"))
+            ? string(abi.encodePacked(baseURI, _convert(randomWords[_tokenId]).toString(), ".png"))
             : "";
     }
 
@@ -165,8 +165,8 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         }
     }
 
-    function linkBalance() public view returns (uint balance) {
-        (balance,,,) = COORDINATOR.getSubscription(subscriptionId);
+    function linkBalance() public view returns (uint _balance) {
+        (_balance,,,) = COORDINATOR.getSubscription(subscriptionId);
     }
 
     function name() public view override returns (string memory) {
@@ -188,25 +188,25 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     /* MUTATIVE FUNCTIONS */
     function purchase(uint _mintAmount) public payable {
         require(!hasRevealStarted, "Already reveal started");
-        uint pay = price * _mintAmount;
-        require(msg.value >= pay, "Not enough");
+        uint _pay = price * _mintAmount;
+        require(msg.value >= _pay, "Not enough");
         require(tokenLength + _mintAmount <= MAX_SUPPLY, "Cannot mint");
 
         for (uint i; i < _mintAmount; i++) {
             _safeMint(msg.sender, tokenLength);
             tokenLength++;
         }
-        if (msg.value > pay) {
-            payable(msg.sender).transfer(msg.value - pay);
+        if (msg.value > _pay) {
+            payable(msg.sender).transfer(msg.value - _pay);
         }
     }
 
     // Seperated Str
-    function reveal(uint tokenId) external onlyNFTOwner(tokenId) onlySeperatedCollectionStrategy {
-        require(requestStatus[tokenId] == RequestStatus.NotRequested, "Already requested");
-        _burn(tokenId);
-        requestStatus[tokenId] = RequestStatus.Requested;
-        _requestRandomWords(tokenId);
+    function reveal(uint _tokenId) external onlyNFTOwner(_tokenId) onlySeperatedCollectionStrategy {
+        require(requestStatus[_tokenId] == RequestStatus.NotRequested, "Already requested");
+        _burn(_tokenId);
+        requestStatus[_tokenId] = RequestStatus.Requested;
+        _requestRandomWords(_tokenId);
     }
 
     /* INTERNAL FUNCTIONS */
@@ -219,38 +219,38 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     }
 
     // Assumes the subscription is funded sufficiently.
-    function _requestRandomWords(uint tokenId) internal {
-        uint32 numWords = strategy() == RevealStrategy.InCollection ? uint32(MAX_SUPPLY) : 1;
+    function _requestRandomWords(uint _tokenId) internal {
+        uint32 _numWords = strategy() == RevealStrategy.InCollection ? uint32(MAX_SUPPLY) : 1;
         // Will revert if subscription is not set and funded.
         uint _requestId = COORDINATOR.requestRandomWords(
             Constant.KEY_HASH,
             subscriptionId,
             Constant.REQUEST_CONFIRMATIONS,
             Constant.CALL_BACK_GAS_LIMIT,
-            numWords
+            _numWords
         );
-        tokenIdToRequestId[tokenId] = _requestId;
-        requestIdToTokenId[_requestId] = tokenId;
+        tokenIdToRequestId[_tokenId] = _requestId;
+        requestIdToTokenId[_requestId] = _tokenId;
     }
 
     function fulfillRandomWords(
         uint256 _requestId, uint256[] memory _randomWords
     ) internal override {
-        uint tokenId = requestIdToTokenId[_requestId];
-        require(requestStatus[tokenId] == RequestStatus.Requested, "Not requested or already fulfilled");
+        uint _tokenId = requestIdToTokenId[_requestId];
+        require(requestStatus[_tokenId] == RequestStatus.Requested, "Not requested or already fulfilled");
 
         if (strategy() == RevealStrategy.InCollection) {
             // In Collection case
-            require(tokenId == type(uint).max, "Only In Collection"); // impossible. double check
+            require(_tokenId == type(uint).max, "Only In Collection"); // impossible. double check
             for (uint i; i < _randomWords.length; i++) {
                 randomWords[i] = _randomWords[i];
             }
         } else {
             // Seperated Collection case
-            require(tokenId != type(uint).max, "Only Seperated Collection"); // impossible. double check
-            IRealNFTForSeperatedCollection(realNFTForSeperatedCollection).mint(tokenId, _convert(_randomWords[0]));
+            require(_tokenId != type(uint).max, "Only Seperated Collection"); // impossible. double check
+            IRealNFTForSeperatedCollection(realNFTForSeperatedCollection).mint(_tokenId, _convert(_randomWords[0]));
         }
 
-        requestStatus[tokenId] = RequestStatus.FulFilled;
+        requestStatus[_tokenId] = RequestStatus.FulFilled;
     }
 }
