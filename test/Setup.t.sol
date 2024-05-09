@@ -72,21 +72,42 @@ contract Setup is Test, TestUtils {
     }
 
 
-    function startRevealInCollection() public {
+    function startRevealInCollection() internal {
         vm.prank(deployer);
         nft.startReveal();
     }
 
-    function mockFulFill(uint requestId) public {
-        NFT.RequestStatus status = nft.requestStatus(type(uint).max);
-        uint MAX_SUPPLY = nft.MAX_SUPPLY();
+    function startRevealSeperatedCollection() internal {
+        vm.startPrank(deployer);
+        nft.setRealNFT(address(realNFTForSeperatedCollection));
+        nft.startReveal();
+        vm.stopPrank();
+    }
+
+    // @dev only for test. For real, chainlink calls rawFulfillRandomWords
+    function mockFulFill(uint requestId) internal {
+        uint tokenId = nft.requestIdToTokenId(requestId);
+        NFT.RequestStatus status = nft.requestStatus(tokenId);
         require(status == NFT.RequestStatus.Requested, "not requested");
-        uint256[] memory _randomWords = new uint256[](MAX_SUPPLY);
-        for (uint i; i < _randomWords.length; i++) {
-            _randomWords[i] = i;
+
+        if (uint(nft.strategy()) == 0) { // RevealStrategy.InCollection
+            uint MAX_SUPPLY = nft.MAX_SUPPLY();
+            uint256[] memory _randomWords = new uint256[](MAX_SUPPLY);
+            for (uint i; i < _randomWords.length; i++) {
+                _randomWords[i] =  uint(keccak256(abi.encode(i + block.timestamp)));
+            }
+            vm.prank(address(COORDINATOR));
+            nft.rawFulfillRandomWords(requestId, _randomWords);
+        } else { // RevealStrategy.SeperatedCollection
+            uint256[] memory _randomWords = new uint256[](1);
+            _randomWords[0] =  uint(keccak256(abi.encode(tokenId + block.timestamp)));
+            vm.prank(address(COORDINATOR));
+            nft.rawFulfillRandomWords(requestId, _randomWords);
         }
-        vm.prank(address(COORDINATOR));
-        nft.rawFulfillRandomWords(requestId, _randomWords);
+    }
+
+    function convert(uint a) internal pure returns (uint) {
+        return a % 25;
     }
 //
 //

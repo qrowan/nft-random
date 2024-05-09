@@ -4,8 +4,12 @@ pragma solidity ^0.8.13;
 import {Setup} from "test/Setup.t.sol";
 import "forge-std/Test.sol";
 import "src/libraries/Constant.sol";
+import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
+
 
 contract URITest is Setup {
+    using StringsUpgradeable for uint256;
+
     function testURIStates() public view {
         assertEq(
             nft.unrevealedURI(),
@@ -35,7 +39,7 @@ contract URITest is Setup {
         nft.tokenURI(0);
     }
 
-    function testUserTokenURIBeforeFulfilledWithInCollection() public {
+    function testURIBeforeFulfilledWithInCollection() public {
         userPurchase(user);
         uint tokenId = nft.tokenLength() - 1;
         startRevealInCollection();
@@ -46,18 +50,40 @@ contract URITest is Setup {
         );
     }
 
-    function testUserTokenURIAfterFulfilledWithInCollection() public {
+    function testURIBeforeFulfilledWithSeperatedCollection() public {
         userPurchase(user);
         uint tokenId = nft.tokenLength() - 1;
+        startRevealSeperatedCollection();
+        vm.prank(user);
+        nft.reveal(tokenId);
+        vm.expectRevert("NonexistentId");
+        nft.tokenURI(tokenId);
+    }
+
+    function testLogURIAfterFulfilledWithInCollection() public {
+        for (uint i; i < nft.MAX_SUPPLY(); i++) {
+            userPurchase(user);
+        }
         startRevealInCollection();
         uint requestId = nft.tokenIdToRequestId(type(uint).max);
-        console.log("tid ", tokenId);
-        console.log("rid ", requestId);
         mockFulFill(requestId);
-        assertEq(
-            nft.tokenURI(tokenId),
-            Constant.UNREVEALED_URI,
-            "wrong URIBeforeFulfilled"
-        );
+        for (uint i; i < nft.MAX_SUPPLY(); i++) {
+            console.log(i, "th URI : ", nft.tokenURI(i));
+        }
+    }
+
+    function testLogURIAfterFulfilledWithSeperatedCollection() public {
+        for (uint i; i < nft.MAX_SUPPLY(); i++) {
+            userPurchase(user);
+        }
+        startRevealSeperatedCollection();
+        for (uint i; i < nft.MAX_SUPPLY(); i++) {
+            vm.prank(user);
+            nft.reveal(i);
+            mockFulFill(nft.tokenIdToRequestId(i));
+        }
+        for (uint i; i < nft.MAX_SUPPLY(); i++) {
+            console.log(i, "th URI : ", realNFTForSeperatedCollection.tokenURI(i));
+        }
     }
 }

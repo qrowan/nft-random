@@ -112,15 +112,23 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
     /* VIEW FUNCTIONS */
     function tokenURI(uint tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "NonexistentId");
-        if (requestStatus[tokenId] != RequestStatus.FulFilled) {
-            return bytes(unrevealedURI).length > 0
-            ? unrevealedURI
-            : "";
+        if (strategy() == RevealStrategy.InCollection) {
+            if (requestStatus[type(uint).max] != RequestStatus.FulFilled) {
+                return bytes(unrevealedURI).length > 0
+                    ? unrevealedURI
+                    : "";
+            }
+        } else {
+            if (requestStatus[tokenId] != RequestStatus.FulFilled) {
+                return bytes(unrevealedURI).length > 0
+                ? unrevealedURI
+                : "";
+            }
         }
 
         // Only when revealed with InCollection Strategy and tokenOwner's request fulfilled
         return bytes(baseURI).length > 0
-            ? string(abi.encodePacked(baseURI, _convert(tokenId).toString(), ".png"))
+            ? string(abi.encodePacked(baseURI, _convert(randomWords[tokenId]).toString(), ".png"))
             : "";
     }
 
@@ -185,10 +193,8 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         return baseURI;
     }
 
-    function _convert(uint tokenId) internal view returns (uint) {
-        if (!hasRevealStarted) return 0;
-        require(strategy() == RevealStrategy.InCollection, "Only InCollection");
-        return randomWords[tokenId] % 25;
+    function _convert(uint word) internal pure returns (uint) {
+        return word % 25;
     }
 
     // Assumes the subscription is funded sufficiently.
@@ -221,7 +227,7 @@ contract NFT is ERC721Upgradeable, Ownable2StepUpgradeable, VRFConsumerBaseV2Upg
         } else {
             // Seperated Collection case
             require(tokenId != type(uint).max, "Only Seperated Collection"); // impossible. double check
-            IRealNFTForSeperatedCollection(realNFTForSeperatedCollection).mint(tokenId, randomWords[tokenId]);
+            IRealNFTForSeperatedCollection(realNFTForSeperatedCollection).mint(tokenId, _convert(_randomWords[0]));
         }
 
         requestStatus[tokenId] = RequestStatus.FulFilled;
